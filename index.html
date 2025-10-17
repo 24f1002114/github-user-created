@@ -1,69 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GitHub Account Creation Date</title>
+    <title>GitHub Account Age</title>
     <style>
         body {
             font-family: sans-serif;
         }
-        #github-status {
-            margin-top: 10px;
-            font-style: italic;
+        #github-info {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>GitHub Account Creation Date</h1>
-    <form id="github-form">
-        <label for="username">GitHub Username:</label>
-        <input type="text" id="username" name="username" required>
-        <button type="submit">Get Info</button>
-    </form>
-    <div id="creation-date"></div>
-    <div id="github-status" aria-live="polite"></div>
+    <h1>GitHub Account Age</h1>
+    <label for="github-username">GitHub Username:</label>
+    <input type="text" id="github-username" name="github-username">
+    <button id="get-info">Get Info</button>
+    <div id="github-info">
+        <p>Account Creation Date: <span id="github-creation-date"></span></p>
+        <p>Account Age: <span id="github-account-age"></span></p>
+    </div>
+    <div id="github-status" role="alert" aria-live="polite"></div>
 
     <script>
-        document.getElementById('github-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const creationDateDiv = document.getElementById('creation-date');
-            const statusDiv = document.getElementById('github-status');
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-
-            statusDiv.textContent = 'Looking up GitHub account creation date...';
-
-            let apiUrl = `https://api.github.com/users/${username}`;
-            let headers = {};
+        document.getElementById('get-info').addEventListener('click', function() {
+            var username = document.getElementById('github-username').value;
+            var token = new URLSearchParams(window.location.search).get('token');
+            var apiUrl = 'https://api.github.com/users/' + username;
 
             if (token) {
-                headers = {
-                    'Authorization': `token ${token}`
-                };
+                apiUrl += '?access_token=' + token;
             }
 
-            fetch(apiUrl, {
-                headers: headers
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                const creationDate = new Date(data.created_at);
-                const formattedDate = creationDate.toISOString().slice(0, 10);
-                creationDateDiv.textContent = `Account creation date: ${formattedDate} UTC`;
-                statusDiv.textContent = 'GitHub account creation date lookup succeeded.';
+            document.getElementById('github-status').textContent = "Looking up GitHub account...";
 
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                creationDateDiv.textContent = `Error: ${error}`;
-                statusDiv.textContent = 'GitHub account creation date lookup failed.';
-            });
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('GitHub API Error: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    var creationDate = new Date(data.created_at);
+                    var creationDateFormatted = creationDate.toISOString().slice(0, 10);
+                    document.getElementById('github-creation-date').textContent = creationDateFormatted + ' UTC';
+
+                    var ageInMilliseconds = Date.now() - creationDate.getTime();
+                    var ageInYears = Math.floor(ageInMilliseconds / (365.25 * 24 * 60 * 60 * 1000)); // Account for leap years
+                    document.getElementById('github-account-age').textContent = ageInYears + ' years';
+                    document.getElementById('github-status').textContent = "GitHub account lookup complete.";
+
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('github-creation-date').textContent = 'Error fetching data.';
+                    document.getElementById('github-account-age').textContent = '';
+                    document.getElementById('github-status').textContent = "GitHub account lookup failed: " + error.message;
+                });
         });
     </script>
 </body>
